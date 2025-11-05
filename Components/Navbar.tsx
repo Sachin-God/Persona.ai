@@ -1,5 +1,5 @@
 "use client"
-import { Menu, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import Logo from '../public/persona.png'
@@ -8,6 +8,7 @@ import {cn} from "@/lib/utils"
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/Components/ui/button'
 import { ModeToggle } from './Theme-Toggle'
+import MobileSidebar from './MobileSidebar'
 
 const font = Poppins({
     weight: "600",
@@ -16,9 +17,10 @@ const font = Poppins({
 
 export default function Navbar() {
     return (
-        <div className='fixed w-full z-50 flex items-center justify-between px-4 py-2 bg-secondary border-b border-primary/10'>
+        <div className='fixed w-full h-16 z-50 flex items-center justify-between px-4 py-2 bg-secondary border-b border-primary/10'>
             <div className='flex items-center'>
-                <Menu className='block md:hidden' />
+                {/* <Menu className='block md:hidden' /> */}
+                <MobileSidebar />
                 <Link href={"/"}>
                     <div className='flex gap-2 items-center'>
                         <Image src={Logo} alt='Logo' className='hidden md:block h-8 w-8 object-fill'/>
