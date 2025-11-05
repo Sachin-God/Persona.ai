@@ -1,7 +1,9 @@
-import Image from "next/image";
+import SearchInput from "@/Components/SearchInput";
 
 export default function Home() {
   return (
-    <div>Hello persona.ai</div>
+    <div className="h-full p-4 space-y-2 text-primary">
+      <SearchInput />
+    </div>
   );
 }
