@@ -17,8 +17,8 @@ export default function Sidebar() {
         },
         {
             icon: Plus,
-            href: '/plus',
-            label: "Plus",
+            href: '/companion/new',
+            label: "Create",
             pro: false
         },
         {
