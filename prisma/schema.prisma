@@ -7,14 +7,39 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
+  // previewFeatures = ["fullTextSearchPostgres"]  // previewFeatures = “Turn on beta features that Prisma is still testing.”
+  // fullTextSearchPostgres → enables full-text search functionality for PostgreSQL
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 model Category {
   id String @id @default(uuid())
   name String
+  personas Persona[]
+}
+
+model Persona {
+  id          String @id @default(uuid())
+  userid      String
+  username    String
+  imgSrc      String
+  name        String @db.Text
+  description String 
+  instruction String @db.Text
+  seed        String @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  String
+
+  @@index([categoryId])
+  // @@fulltext([name])
+  @@index([name]) //@@index is B Tree Search Feature
 }
