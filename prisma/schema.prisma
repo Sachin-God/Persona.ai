@@ -36,10 +36,33 @@ model Persona {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  messages    Message []
+
   category    Category @relation(fields: [categoryId], references: [id])
   categoryId  String
 
   @@index([categoryId])
   // @@fulltext([name])
   @@index([name]) //@@index is B Tree Search Feature
+}
+
+enum Role {
+  user
+  system
+}
+
+model Message {
+  id          String @id
+  role        Role
+  content     String @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  personaId   String
+  userId      String
+
+  persona     Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  @@index([personaId])
 }
