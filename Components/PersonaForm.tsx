@@ -12,6 +12,8 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Button } from "./ui/button";
 import { Wand2 } from "lucide-react";
+import axios from 'axios';
+import { toast } from "sonner"
 
 const INSTRUCTION = `Act as an AI persona with a unique voice and character. Be expressive, curious, and helpful in every response. Keep the tone natural and human-like, showing warmth or professionalism as needed. Always stay consistent with your persona’s role and personality.`;
 
@@ -69,7 +71,21 @@ export default function PersonaForm({ initialdata, categories }: PersonaFormProp
     const isLoading = form.formState.isSubmitting;
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
-        console.log(values);
+        try {
+            // Update Persona
+            if (initialdata) {
+                await axios.patch(`/api/persona/${initialdata.id}`, values);
+                toast.success("Persona updated successfully.")
+            }
+            else {
+                // Create the persona
+                await axios.post(`/api/persona`, values);
+                toast.success("Persona created successfully.")
+            }
+        } catch (error) {
+            console.log("Error in PersonaForm : ", error);
+            toast.error("Something Went Wrong.")
+        }
     }
     return (
         <div className="h-full p-4 space-y-2 max-w-3xl mx-auto">
