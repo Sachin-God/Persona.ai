@@ -30,7 +30,7 @@ export default function ChatMessages({ isLoading, messages = [], persona }: Chat
 
   return (
     <div className="flex-1 overflow-y-auto pr-4">
-      <ChatMessage isLoading={fakeLoading} src={persona.imgSrc} role="system" content={`Hello! I am ${persona.name}'s Persona, who is a ${persona.description}`} />
+      <ChatMessage isLoading={fakeLoading} src={persona.imgSrc} role="system" content={`Hello! I am ${persona.name}, ${persona.description}`} />
       {messages.map((message) => (
         <ChatMessage
           key={message.content}
