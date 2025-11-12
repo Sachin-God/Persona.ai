@@ -42,7 +42,7 @@ export default async function page({ params }: chatProps) {
 
 
   return (
-    <div>
+    <div className='h-full'>
       <ChatClient persona={persona} />
     </div>
   )

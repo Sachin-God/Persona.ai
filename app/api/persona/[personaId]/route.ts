@@ -34,7 +34,8 @@ export async function PATCH(req: NextRequest, { params }: {
 
         const persona = await client.persona.update({
             where: {
-                id: personaId
+                id: personaId,
+                userid : user.id
             },
             data: {
                 categoryId,

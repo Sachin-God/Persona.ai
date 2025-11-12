@@ -36,7 +36,7 @@ export default function PersonaPage({ data }: PersonaProp) {
       {data.map((item) => (
         <Card
           key={item.id}
-          className="bg-primary/10 rounded-xl cursor-pointer hover:opacity-75 transition border-0"
+          className="bg-primary/10 rounded-xl cursor-pointer hover:opacity-75 transition border-0 relative pb-8"
         >
           <Link href={`/chat/${item.id}`}>
             <CardHeader className="flex flex-col items-center justify-center text-center text-muted-foreground">
@@ -51,7 +51,7 @@ export default function PersonaPage({ data }: PersonaProp) {
               <p className='font-bold'>{item.name}</p>
               <p className='text-xs'>{item.description}</p>
             </CardHeader>
-            <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
+            <CardFooter className="absolute left-0 right-0 bottom-3 flex items-center justify-between text-xs text-muted-foreground">
               <p className="lowercase">@{item.username}</p>
               <div className="flex items-center">
                 <MessagesSquare className="w-3 h-3 mr-1" />
