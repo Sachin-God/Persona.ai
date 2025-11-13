@@ -36,7 +36,7 @@ export default function ChatMessages({ isLoading, messages = [], persona }: Chat
           key={message.content}
           role={message.role}
           content={message.content}
-          src={message.src}
+          src={persona.imgSrc}
         />
       ))}
       {isLoading && (

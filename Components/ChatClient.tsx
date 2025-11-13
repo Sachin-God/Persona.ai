@@ -40,7 +40,7 @@ export default function ChatClient({
                 content: completion,
             };
 
-            setMessages((current) => [...current, systemMessage]);
+            setMessages(current => [...current, systemMessage]);
             setInput("");
 
             router.refresh();

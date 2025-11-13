@@ -9,7 +9,7 @@ import { Button } from "./ui/button";
 import { Copy } from "lucide-react";
 
 export interface ChatMessageProps {
-  role: "system" | "user",
+  role: "system" | "user" | string,
   content?: string;
   isLoading?: boolean;
   src?: string;
