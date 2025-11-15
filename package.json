@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "prisma:generate": "prisma generate --schema=./packages/db/schema.prisma"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.65",
