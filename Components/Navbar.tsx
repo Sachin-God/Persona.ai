@@ -23,7 +23,7 @@ export default function Navbar({ isPro }: { isPro: boolean }) {
     <div className="fixed w-full h-16 z-50 flex items-center justify-between px-4 py-2 bg-secondary border-b border-primary/10">
       {/* Left side: logo and title */}
       <div className="flex items-center">
-        <MobileSidebar />
+        <MobileSidebar isPro={isPro}/>
         <Link href={"/"}>
           <div className="flex gap-2 items-center">
             <Image
