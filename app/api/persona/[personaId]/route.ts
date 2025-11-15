@@ -1,4 +1,5 @@
 import client from "@/lib/prismadb";
+import { checkSubscription } from "@/lib/subscription";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -32,10 +33,17 @@ export async function PATCH(req: NextRequest, { params }: {
             );
         }
 
+        const isPro = await checkSubscription();
+
+        if (!isPro) {
+            return new NextResponse("Pro subscription required", { status: 403 });
+        }
+
+
         const persona = await client.persona.update({
             where: {
                 id: personaId,
-                userid : user.id
+                userid: user.id
             },
             data: {
                 categoryId,
@@ -79,9 +87,9 @@ export async function DELETE(req: NextRequest, { params }: {
         }
 
         const persona = await client.persona.delete({
-            where : {
-                userid : userId,
-                id : personaId
+            where: {
+                userid: userId,
+                id: personaId
             }
         })
 

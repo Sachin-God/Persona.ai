@@ -5,6 +5,7 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/Components/ui/theme-provider";
 import { Toaster } from "sonner";
+import { ProModal } from "@/Components/proModel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <ProModal />
             {children}
             <Toaster />
           </ThemeProvider>

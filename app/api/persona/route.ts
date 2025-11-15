@@ -1,4 +1,5 @@
 import client from "@/lib/prismadb";
+import { checkSubscription } from "@/lib/subscription";
 import { currentUser } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -22,8 +23,15 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        const isPro = await checkSubscription();
+
+        if (!isPro) {
+            return new NextResponse("Pro subscription required", { status: 403 });
+        }
+
+
         const persona = await client.persona.create({
-            data : {
+            data: {
                 categoryId,
                 name,
                 description,
@@ -31,14 +39,14 @@ export async function POST(req: NextRequest) {
                 seed,
                 imgSrc,
 
-                userid : user.id,
-                username : user.firstName
+                userid: user.id,
+                username: user.firstName
             }
         });
 
         return NextResponse.json({
             message: "User Created Successfully",
-        }, {status : 200});
+        }, { status: 200 });
     } catch (error) {
         console.log("Error in /api/persona/POST Route : ", error);
     }

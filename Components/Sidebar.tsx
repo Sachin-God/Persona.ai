@@ -1,13 +1,16 @@
 "use client"
 
+import { useProModal } from "@/hooks/use-pro-model";
 import { cn } from "@/lib/utils"
 import { ExternalLink, Home, Plus, Settings, User2Icon } from "lucide-react"
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation"
 
-export default function Sidebar() {
+export default function Sidebar({isPro} : {isPro : boolean}) {
     const pathname = usePathname();
     const router = useRouter();
+    const proModel = useProModal();
+
     const routes = [
         {
             icon: Home,
@@ -19,7 +22,7 @@ export default function Sidebar() {
             icon: Plus,
             href: '/persona/new',
             label: "Create",
-            pro: false
+            pro: true
         },
         {
             icon: Settings,
@@ -36,6 +39,11 @@ export default function Sidebar() {
     ]
 
     const onNavigate = (url: string, pro: boolean) => {
+        if (pro && !isPro){
+            console.log(isPro);
+            
+            return proModel.onOpen();
+        }
         return router.push(url)
     }
     return (

@@ -10,13 +10,15 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import { Button } from "@/Components/ui/button";
 import { ModeToggle } from "./Theme-Toggle";
 import MobileSidebar from "./MobileSidebar";
+import { useProModal } from "@/hooks/use-pro-model";
 
 const font = Poppins({
   weight: "600",
   subsets: ["latin"],
 });
 
-export default function Navbar() {
+export default function Navbar({ isPro }: { isPro: boolean }) {
+  const promodal = useProModal();
   return (
     <div className="fixed w-full h-16 z-50 flex items-center justify-between px-4 py-2 bg-secondary border-b border-primary/10">
       {/* Left side: logo and title */}
@@ -43,10 +45,10 @@ export default function Navbar() {
 
       {/* Right side: buttons */}
       <div className="flex items-center gap-x-3">
-        <Button variant={"premium"} size={"sm"}>
+        {!isPro && <Button onClick={promodal.onOpen} variant={"premium"} size={"sm"}>
           Upgrade
           <Sparkles className="h-4 w-4 fill-white text-white ml-2" />
-        </Button>
+        </Button>}
 
         <ModeToggle />
 
