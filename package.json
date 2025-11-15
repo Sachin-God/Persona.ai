@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
+  "dev": "next dev",
+  "build": "prisma generate --schema=./prisma/schema.prisma && next build",
+  "vercel-build": "prisma generate --schema=./prisma/schema.prisma && next build",
+  "postinstall": "prisma generate --schema=./prisma/schema.prisma || true",
+  "start": "next start",
+  "lint": "eslint"
+},
   "dependencies": {
     "@ai-sdk/openai": "^2.0.65",
     "@ai-sdk/react": "^2.0.93",
