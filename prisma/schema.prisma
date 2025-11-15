@@ -5,12 +5,12 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  binaryTargets = ["native","linux-musl", "rhel-openssl-3.0.x"]
-  output   = "../node_modules/.prisma/client"
-  // previewFeatures = ["fullTextSearchPostgres"]  // previewFeatures = “Turn on beta features that Prisma is still testing.”
-  // fullTextSearchPostgres → enables full-text search functionality for PostgreSQL
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  // remove output to use default location, or set output = "node_modules/.prisma/client"
+  // output = "node_modules/.prisma/client"
 }
+
 
 datasource db {
   provider     = "postgresql"
