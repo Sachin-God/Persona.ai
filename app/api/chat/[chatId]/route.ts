@@ -137,7 +137,7 @@ async function callGeminiAPI(prompt: string): Promise<string> {
 export async function POST(
   req: Request,
   { params }: { params: { chatId: string } }
-) {
+) : Promise<NextResponse> {
   try {
     const { prompt } = await req.json();
     const user = await currentUser();
