@@ -1,31 +1,50 @@
-// /app/api/chat/[chatId]/route.ts
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+// /api/chat/[chatId]/route.ts
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { CallbackManager } from "@langchain/core/callbacks/manager";
 import { Replicate } from "@langchain/community/llms/replicate";
+import { NextResponse } from "next/server";
 
 import { MemoryManager } from "@/lib/memory";
 import { rateLimit } from "@/lib/rate-limit";
 import client from "@/lib/prismadb";
 
 /**
- * Gemini fallback helper (unchanged logic, slightly cleaned).
- * Expects server API key in GEMINI_API_KEY | GOOGLE_API_KEY and optional GEMINI_MODEL.
+ * Helper to call Google Gemini (Generative Language) REST API as a fallback.
+ * Uses x-goog-api-key header (server-side API key from AI Studio / Google Cloud).
+ *
+ * Env vars used:
+ * - GEMINI_API_KEY or GOOGLE_API_KEY  (server API key)
+ * - GEMINI_MODEL (optional, default: "gemini-2.5-flash")
  */
+// Robust Gemini fallback helper
 async function callGeminiAPI(prompt: string): Promise<string> {
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) throw new Error("No GEMINI_API_KEY / GOOGLE_API_KEY configured for Gemini fallback.");
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+    model
+  )}:generateContent`;
+
   const body = {
-    contents: [{ parts: [{ text: prompt }] }],
+    contents: [
+      {
+        parts: [
+          {
+            text: prompt,
+          },
+        ],
+      },
+    ],
+    // optionally add temperature, candidateCount etc.
   };
 
   const resp = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
     body: JSON.stringify(body),
   });
 
@@ -36,20 +55,30 @@ async function callGeminiAPI(prompt: string): Promise<string> {
 
   const json = await resp.json();
 
+  // Robust extraction helper
   const extractTextFromCandidate = (cand: any): string | null => {
     if (!cand) return null;
-    const content = cand.content ?? cand;
 
+    // candidate.content may be a string, object, or array
+    const content = cand.content ?? cand;
+    // If content is string-like:
     if (typeof content === "string") return content;
 
+    // If content is an array: try flattening text fields
     if (Array.isArray(content)) {
       const partsText = content
         .map((item: any) => {
           if (!item) return "";
           if (typeof item === "string") return item;
+          // common shapes: { text: "..." } or { parts: [{ text: "..." }] }
           if (typeof item.text === "string") return item.text;
-          if (Array.isArray(item.parts)) return item.parts.map((p: any) => (typeof p.text === "string" ? p.text : "")).join("");
-          if (Array.isArray(item.content)) return item.content.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join("");
+          if (Array.isArray(item.parts)) {
+            return item.parts.map((p: any) => (typeof p.text === "string" ? p.text : "")).join("");
+          }
+          // nested content
+          if (Array.isArray(item.content)) {
+            return item.content.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join("");
+          }
           return "";
         })
         .filter(Boolean)
@@ -57,12 +86,14 @@ async function callGeminiAPI(prompt: string): Promise<string> {
       if (partsText) return partsText;
     }
 
+    // If content is object: try common keys
     if (typeof content === "object") {
       if (typeof content.text === "string") return content.text;
       if (Array.isArray(content.parts)) {
         const p = content.parts.map((pp: any) => (typeof pp.text === "string" ? pp.text : "")).join("");
         if (p) return p;
       }
+      // some variants: content = { items: [...] }
       if (Array.isArray(content.items)) {
         return content.items.map((it: any) => (typeof it.text === "string" ? it.text : "")).join("");
       }
@@ -71,6 +102,8 @@ async function callGeminiAPI(prompt: string): Promise<string> {
     return null;
   };
 
+  // Try multiple top-level shapes that Gemini might return
+  // 1) json.candidates array
   if (Array.isArray(json?.candidates) && json.candidates.length > 0) {
     for (const cand of json.candidates) {
       const t = extractTextFromCandidate(cand);
@@ -78,6 +111,7 @@ async function callGeminiAPI(prompt: string): Promise<string> {
     }
   }
 
+  // 2) json.output array
   if (Array.isArray(json?.output) && json.output.length > 0) {
     for (const out of json.output) {
       const t = extractTextFromCandidate(out);
@@ -85,40 +119,44 @@ async function callGeminiAPI(prompt: string): Promise<string> {
     }
   }
 
-  if (typeof json?.text === "string" && json.text.trim().length) return json.text;
-  if (typeof json?.response === "string" && json.response.trim().length) return json.response;
+  // 3) direct text fields
+  if (typeof json?.text === "string" && json.text.trim().length > 0) {
+    return json.text;
+  }
+  if (typeof json?.response === "string" && json.response.trim().length > 0) {
+    return json.response;
+  }
 
-  console.warn("callGeminiAPI: unrecognized Gemini response shape:", JSON.stringify(json, null, 2));
+  // Nothing matched — log full json for debugging and return empty string
+  console.warn("callGeminiAPI: unrecognized Gemini response shape, logging full response for debugging:");
+  console.warn(JSON.stringify(json, null, 2));
   return "";
 }
 
-/**
- * POST handler.
- * Note: `context.params` may be a Promise per Next's type; resolve it to get `chatId`.
- */
-export async function POST(req: NextRequest, context: { params: { chatId: string } | Promise<{ chatId: string }> }) {
+
+export async function POST(
+  req: Request,
+  { params }: { params: { chatId: string } }
+) {
   try {
-    // Resolve params (handles both plain object and Promise<{chatId}>)
-    const paramsResolved = await Promise.resolve(context.params);
-    const chatId = paramsResolved.chatId;
-
-    // Read body
     const { prompt } = await req.json();
-
-    // Auth: ensure we have a user
     const user = await currentUser();
-    if (!user || !user.id || !user.firstName) {
+
+    if (!user || !user.firstName || !user.id) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Rate limit
-    const identifier = `${req.url}-${user.id}`;
+    const identifier = req.url + "-" + user.id;
     const { success } = await rateLimit(identifier);
+
     if (!success) {
       return new NextResponse("Rate Limit exceeded", { status: 429 });
     }
 
-    // Persist user message to persona messages
+    const { chatId } = await params;
+    console.log("chatId : ", chatId);
+
+    // Persist the user message into the persona's message list
     const persona = await client.persona.update({
       where: { id: chatId },
       data: {
@@ -137,10 +175,14 @@ export async function POST(req: NextRequest, context: { params: { chatId: string
       return new NextResponse("Persona not found", { status: 404 });
     }
 
-    // Memory key and manager
-    const personaName = persona.id;
-    const personaFileName = `${personaName}.txt`;
-    const personaKey = { personaName, userId: user.id, modelName: "llama2-13b" };
+    const name = persona.id;
+    const persona_file_name = name + ".txt";
+
+    const personaKey = {
+      personaName: name,
+      userId: user.id,
+      modelName: "llama2-13b",
+    };
 
     const memoryManager = await MemoryManager.getInstance();
     let records = await memoryManager.readLatestHistory(personaKey);
@@ -150,81 +192,98 @@ export async function POST(req: NextRequest, context: { params: { chatId: string
       records = await memoryManager.readLatestHistory(personaKey);
     }
 
-    // write user prompt to memory
-    await memoryManager.writeToHistory(`User: ${prompt}\n`, personaKey);
+    await memoryManager.writeToHistory("User: " + prompt + "\n", personaKey);
 
-    // Vector search for relevant history
+    // Query Pinecone (or your vector DB) for similar documents
     const recentChatHistory = await memoryManager.readLatestHistory(personaKey);
-    const similarDocs = await memoryManager.vectorSearch(recentChatHistory, personaFileName);
+    const similarDocs = await memoryManager.vectorSearch(
+      recentChatHistory,
+      persona_file_name
+    );
 
-    const relevantHistory = (similarDocs && similarDocs.length)
-      ? similarDocs.map((d: any) => d.pageContent).join("\n")
-      : "";
+    let relevantHistory = "";
+    if (similarDocs && similarDocs.length !== 0) {
+      // @ts-ignore pageContent may exist depending on your vector doc shape
+      relevantHistory = similarDocs.map((doc) => doc.pageContent).join("\n");
+    }
 
-    // Prepare model (Replicate) with callback manager
+    // Create LangChain/Replicate model
     const handlers = {};
     const callbackManager = CallbackManager.fromHandlers(handlers);
 
     const model = new Replicate({
       model: "andreasjansson/llama-2-13b-embeddings:7115a4c65b86815e31412e53de1211c520164c190945a84c425b59dccbc47148",
       apiKey: process.env.REPLICATE_API,
-      input: { max_length: 2048 },
+      input: {
+        max_length: 2048,
+      },
       callbackManager,
     });
+
     model.verbose = true;
 
     const promptToModel = `
-ONLY generate plain sentences without prefix of who is speaking. DO NOT use ${personaName}: prefix.
+ONLY generate plain sentences without prefix of who is speaking. DO NOT use ${name}: prefix.
 
 ${persona.instruction}
 
-Below are the relevant details about ${personaName}'s past and the conversation you are in.
+Below are the relevant details about ${name}'s past and the conversation you are in.
 ${relevantHistory}
 
 ${recentChatHistory}
-${personaName}:
+${name}:
 `;
 
-    // Try Replicate, fallback to Gemini on payment errors
-    let responseText = "";
+    // Call the model (try Replicate first, fallback to Gemini)
+    let respText = "";
+
     try {
-      const raw = await model.invoke(promptToModel);
-      responseText = String(raw ?? "");
+      const respRaw = await model.invoke(promptToModel);
+      respText = String(respRaw ?? "");
     } catch (err: any) {
       console.error("[MODEL_CALL_ERROR]", err);
 
+      // detect Replicate payment error (402) or explicit insufficient credit text
       const isReplicatePaymentError =
         err?.response?.status === 402 ||
         String(err?.message ?? "").toLowerCase().includes("insufficient credit");
 
       if (isReplicatePaymentError) {
-        console.warn("Replicate payment error — attempting Gemini fallback.");
+        console.warn("Replicate returned 402/Insufficient credit. Trying Gemini fallback if configured.");
+
         try {
-          responseText = await callGeminiAPI(promptToModel);
+          respText = await callGeminiAPI(promptToModel);
           console.log("Gemini fallback succeeded.");
-        } catch (gErr: any) {
-          console.error("Gemini fallback failed:", gErr);
-          throw err; // surface original replicate error
+        } catch (gemErr: any) {
+          console.error("Gemini fallback failed:", gemErr);
+          // Re-throw original replicate error so caller sees original cause (or you can throw gemErr)
+          throw err;
         }
       } else {
-        throw err; // not a payment error; bubble up
+        // Not a payment error — rethrow so outer catch returns 500
+        throw err;
       }
     }
 
-    // Light cleanup and take first non-empty line
-    const cleaned = responseText.replaceAll(",", "").trim();
+    // process respText as before
+    const resp = String(respText ?? "");
+    // light cleanup: remove leading/trailing blank lines and excessive commas if desired
+    const cleaned = resp.replaceAll(",", "").trim();
+    // take the first non-empty line as your response
     const firstLine = cleaned.split("\n").find((l) => l.trim().length > 0) ?? cleaned;
-    const finalText = firstLine.trim();
 
-    // Persist assistant reply
-    if (finalText.length > 0) {
-      await memoryManager.writeToHistory(finalText + "\n", personaKey);
+    const responseText = firstLine.trim();
+
+    // persist the assistant/system reply to memory and DB
+    if (responseText.length > 0) {
+      await memoryManager.writeToHistory(responseText + "\n", personaKey);
+
       await client.persona.update({
         where: { id: chatId },
         data: {
           messages: {
             create: {
-              content: finalText,
+              content: responseText,
               role: "system",
               userId: user.id,
               id: crypto.randomUUID(),
@@ -234,7 +293,8 @@ ${personaName}:
       });
     }
 
-    return new NextResponse(finalText, {
+    // Return a normal HTTP response containing the generated text.
+    return new NextResponse(responseText, {
       status: 200,
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
