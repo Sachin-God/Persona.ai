@@ -1,5 +1,5 @@
 // /api/chat/[chatId]/route.ts
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { CallbackManager } from "@langchain/core/callbacks/manager";
 import { Replicate } from "@langchain/community/llms/replicate";
 import { NextResponse } from "next/server";

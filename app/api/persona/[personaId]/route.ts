@@ -3,9 +3,7 @@ import { checkSubscription } from "@/lib/subscription";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function PATCH(req: NextRequest, { params }: {
-    params: { personaId: string }
-}) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ personaId: string }> }) {
     try {
         const { personaId } = await params;
         if (!personaId) {
@@ -66,9 +64,7 @@ export async function PATCH(req: NextRequest, { params }: {
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: {
-    params: { personaId: string }
-}) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ personaId: string }> }) {
     try {
         const { userId } = await auth()
         if (!userId) {
