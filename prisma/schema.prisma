@@ -7,7 +7,7 @@
 generator client {
   provider = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
-  // output   = "../node_modules/.prisma/client"
+  output   = "../node_modules/.prisma/client"
   // previewFeatures = ["fullTextSearchPostgres"]  // previewFeatures = “Turn on beta features that Prisma is still testing.”
   // fullTextSearchPostgres → enables full-text search functionality for PostgreSQL
 }
